@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>用户注册</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2rem;
+            margin: 20px;
+        }
+        .auth-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2c3e50;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            font-weight: 500;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .submit-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .switch-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #6c757d;
+        }
+        .switch-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            padding-left: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">用户注册</h2>
+            {% if form.errors %}
+            <div class="error-message">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    {{ error }}<br>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-control" name="username" value="{{ form.username.value|default_if_none:'' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">邮箱</label>
+                    <input type="email" class="form-control" name="email" value="{{ form.email.value|default_if_none:'' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-control" name="password1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">确认密码</label>
+                    <input type="password" class="form-control" name="password2" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">手机号</label>
+                    <input type="text" class="form-control" name="phone" value="{{ form.phone.value|default_if_none:'' }}" required>
+                </div>
+                <!-- 地区选择：采用下拉框，选项中包含时区信息 -->
+                <div class="form-group">
+                    <label class="form-label">地区</label>
+                    <select class="form-control" name="region" required>
+                        <option value="">请选择地区</option>
+                        <option value="Asia/Shanghai" {% if form.region.value == "Asia/Shanghai" %}selected{% endif %}>北京/上海/广州/深圳 (UTC+8)</option>
+                        <option value="Asia/Tokyo" {% if form.region.value == "Asia/Tokyo" %}selected{% endif %}>东京 (UTC+9)</option>
+                        <option value="Asia/Singapore" {% if form.region.value == "Asia/Singapore" %}selected{% endif %}>新加坡 (UTC+8)</option>
+                        <option value="America/New_York" {% if form.region.value == "America/New_York" %}selected{% endif %}>纽约 (UTC-5)</option>
+                        <option value="Europe/London" {% if form.region.value == "Europe/London" %}selected{% endif %}>伦敦 (UTC+0)</option>
+                        <option value="Australia/Sydney" {% if form.region.value == "Australia/Sydney" %}selected{% endif %}>悉尼 (UTC+10)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">头像</label>
+                    <input type="file" class="form-control" name="avatar">
+                </div>
+                <button type="submit" class="submit-btn">立即注册</button>
+                <div class="switch-link">
+                    已有账户？ <a href="{% url 'login' %}">立即登录</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

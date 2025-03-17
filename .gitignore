@@ -1,0 +1,13 @@
+# 忽略临时文件
+*.tmp
+
+# 忽略日志文件
+DumpStack.log.tmp
+
+# 忽略 Python 缓存文件
+__pycache__/
+*.pyc
+
+# 忽略环境变量文件（如果使用虚拟环境）
+env/
+venv/
