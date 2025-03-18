@@ -5,7 +5,6 @@ from datetime import timedelta, datetime
 from django.utils import timezone, translation
 from .forms import LoginForm, RegisterForm, QuickTaskForm, DetailedTaskForm, UserUpdateForm
 from .models import Task
-from .tasks import send_email_task
 from django.conf import settings
 
 def custom_login(request):
@@ -39,19 +38,17 @@ def register(request):
 
 def home(request):
     user = request.user
-    # 如果用户已登录且设置了地区（这里假设region存储的是时区字符串）
+    # 同步用户时区
     if user.is_authenticated and user.region:
         try:
             timezone.activate(user.region)
         except Exception:
-            timezone.deactivate()  # 如果激活失败，则使用默认
-    # 如有语言偏好字段，可做如下处理（假设user.language为 'zh-hans' 或 'en' 等）
+            timezone.deactivate()
     if user.is_authenticated and hasattr(user, 'language'):
         translation.activate(user.language)
     else:
         translation.activate(settings.LANGUAGE_CODE)
-        
-    # 获取当前时间（已同步时区）
+
     current_time = timezone.now()
 
     filter_status = request.GET.get('status', 'unfinished')
@@ -65,29 +62,21 @@ def home(request):
     else:
         current_date = current_time
 
-    # 查询当前用户任务（初始查询）
     user_tasks = Task.objects.filter(user=user)
-    
-    # 如果提供了搜索条件，先过滤出包含搜索关键字的任务，再按照“包含次数”和优先级排序
+
     if search_query:
-        # 将查询结果转换为列表，便于后续在 Python 层做自定义排序
         task_list = list(user_tasks)
         def priority_order(task):
-            # 自定义优先级排序，高 -> 中 -> 低
             mapping = {'high': 1, 'medium': 2, 'low': 3}
             return mapping.get(task.priority, 4)
-        # 过滤出标题中包含搜索关键词的任务，并统计出现次数（不区分大小写）
         filtered_tasks = []
         for task in task_list:
             count = task.title.lower().count(search_query.lower())
             if count > 0:
                 filtered_tasks.append((task, count))
-        # 按照出现次数降序、然后按优先级排序（优先级值小的排前面）
         filtered_tasks.sort(key=lambda x: (-x[1], priority_order(x[0])))
-        # 取出排序后的任务对象列表
         user_tasks = [item[0] for item in filtered_tasks]
     else:
-        # 根据状态过滤
         if filter_status == 'completed':
             user_tasks = user_tasks.filter(is_completed=True)
         elif filter_status == 'unfinished':
@@ -98,9 +87,8 @@ def home(request):
                 due_date__lte=current_time + timedelta(days=7),
                 due_date__gte=current_time
             )
-        # 默认按截止时间排序
         user_tasks = user_tasks.order_by('due_date')
-    
+
     sidebar_tasks = user_tasks
     soon_expiring_tasks = Task.objects.filter(
         user=user,
@@ -123,7 +111,7 @@ def home(request):
         'selected_task': selected_task,
         'quick_form': QuickTaskForm(),
         'detailed_form': DetailedTaskForm(),
-        'current_time': current_time,  # 用于日历显示
+        'current_time': current_time,
         'search_query': search_query,
     }
     return render(request, 'TaskSystemapp/home.html', context)
@@ -152,7 +140,6 @@ def detailed_add_task(request):
     return redirect('home')
 
 def user_profile(request):
-    # 单独的用户详情页，展示并允许修改用户信息
     return render(request, 'TaskSystemapp/profile.html', {'user': request.user})
 
 def complete_task(request, task_id):
@@ -177,14 +164,7 @@ def quick_add_task(request):
             task = form.save(commit=False)
             task.user = request.user
             task.save()
-            # 邮件提醒：截止前2小时提醒
-            reminder_time = task.due_date - timedelta(hours=2)
-            now = timezone.now()
-            if reminder_time > now:
-                subject = f"任务提醒：{task.title}"
-                message = f"你的任务 '{task.title}' 将于 {task.due_date.strftime('%Y-%m-%d %H:%M')} 到期，请及时处理。"
-                recipient_list = [request.user.email]
-                send_email_task.apply_async((subject, message, recipient_list), eta=reminder_time)
+            # 移除邮件发送部分，直接返回成功
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})

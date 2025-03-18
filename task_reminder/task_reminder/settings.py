@@ -11,10 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-import os 
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -24,15 +23,18 @@ SECRET_KEY = 'django-insecure-f(u=jb(s#!6d()ubrzh$9lz7j3vm=20858#@m2-tjmxo^4y2t8
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev",
+]
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    'fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev'
+]
 
 # Application definition
 
-
 INSTALLED_APPS = [
-    "TaskSystemapp.apps.TaskSystemConfig", #添加的应用
+    "TaskSystemapp.apps.TaskSystemConfig",  #添加的应用
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -75,10 +77,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'task_reminder.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 
 # task_reminder/settings.py
 DATABASES = {
@@ -93,28 +93,27 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-
-
-
 USE_I18N = True
-
 
 TIME_ZONE = 'UTC'  # 数据库存储使用UTC
 USE_TZ = True

@@ -3,259 +3,323 @@
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
-    <title>任务管理中心</title>
+    <title>{% if request.GET.widget_mode %}Widget Mode{% else %}任务管理中心{% endif %}</title>
     <!-- Bootstrap CSS & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    {% if request.GET.widget_mode %}
+    <!-- Widget 模式下的样式（新窗口） -->
     <style>
-        :root {
-            --sidebar-width: 280px;
-            --header-height: 60px;
-            --main-bg: #f8f9fa;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-        }
-        .main-container {
-            display: grid;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            grid-template-rows: auto 1fr;  /* 上方增加 ticker */
-            min-height: 100vh;
-            background: var(--main-bg);
-        }
-        .header {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            padding: 0 2rem;
-            background: white;
-            border-bottom: 1px solid #dee2e6;
-            z-index: 200;
-        }
-        /* 滚动提醒区域 */
-        .ticker {
-            grid-column: 1 / -1;
-            background: #ffeeba;
-            color: #856404;
-            padding: 5px 1rem;
-            font-size: 14px;
-            border-bottom: 1px solid #ffeeba;
-        }
-        .sidebar {
-            padding: 1.5rem;
-            border-right: 1px solid #dee2e6;
-            background: #f2f2f2;
-            height: calc(100vh - var(--header-height) - 40px); /* 40px为ticker高度 */
-            overflow-y: auto;
-        }
-        .task-detail {
-            padding: 2rem;
-            background: white;
-            height: calc(100vh - var(--header-height) - 40px);
-            overflow-y: auto;
-        }
-        /* 简单的 marquee 效果 */
-        .marquee {
-            white-space: nowrap;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-        .marquee p {
-            display: inline-block;
-            padding-left: 100%;
-            animation: marquee 15s linear infinite;
-            margin: 0;
-        }
-        @keyframes marquee {
-            0%   { transform: translate(0, 0); }
-            100% { transform: translate(-100%, 0); }
-        }
+       html, body {
+         margin: 0;
+         padding: 0;
+         background: transparent;
+         overflow: hidden;
+         height: 100%;
+       }
+       #widgetContainer {
+         width: 100%;
+         height: 100%;
+         display: flex;
+         flex-direction: column;
+         justify-content: center;
+         align-items: center;
+         background: rgba(255, 255, 255, 0.9);
+         border: 1px solid #ccc;
+         border-radius: 5px;
+         padding: 1rem;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+       }
     </style>
+    {% else %}
+    <!-- 全主页样式 -->
+    <style>
+      :root {
+          --sidebar-width: 280px;
+          --header-height: 60px;
+          --main-bg: #f8f9fa;
+      }
+      body {
+          margin: 0;
+          padding: 0;
+      }
+      .main-container {
+          display: grid;
+          grid-template-columns: var(--sidebar-width) 1fr;
+          grid-template-rows: auto 1fr;  /* ticker 区域 */
+          min-height: 100vh;
+          background: var(--main-bg);
+      }
+      .header {
+          grid-column: 1 / -1;
+          display: flex;
+          align-items: center;
+          padding: 0 2rem;
+          background: white;
+          border-bottom: 1px solid #dee2e6;
+          z-index: 200;
+      }
+      /* 滚动提醒区域 */
+      .ticker {
+          grid-column: 1 / -1;
+          background: #ffeeba;
+          color: #856404;
+          padding: 5px 1rem;
+          font-size: 14px;
+          border-bottom: 1px solid #ffeeba;
+      }
+      .sidebar {
+          padding: 1.5rem;
+          border-right: 1px solid #dee2e6;
+          background: #f2f2f2;
+          height: calc(100vh - var(--header-height) - 40px); /* 40px 为 ticker 高度 */
+          overflow-y: auto;
+      }
+      .task-detail {
+          padding: 2rem;
+          background: white;
+          height: calc(100vh - var(--header-height) - 40px);
+          overflow-y: auto;
+      }
+      /* 简单的 marquee 效果 */
+      .marquee {
+          white-space: nowrap;
+          overflow: hidden;
+          box-sizing: border-box;
+      }
+      .marquee p {
+          display: inline-block;
+          padding-left: 100%;
+          animation: marquee 15s linear infinite;
+          margin: 0;
+      }
+      @keyframes marquee {
+          0%   { transform: translate(0, 0); }
+          100% { transform: translate(-100%, 0); }
+      }
+    </style>
+    {% endif %}
 </head>
 <body>
-<div class="main-container">
-    <!-- 头部 -->
-    <header class="header">
-        <div class="time-filter">
-            <!-- 日期选择器，显示当前（或 URL 指定）日期 -->
-            <input type="date" id="calendarTrigger" value="{{ current_time|date:'Y-m-d' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
-            <select id="taskFilter" class="ms-2" onchange="onFilterChange(this.value)">
-                <option value="unfinished" {% if request.GET.status == 'unfinished' or not request.GET.status %}selected{% endif %}>未完成</option>
-                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>已完成</option>
-                <option value="expiring" {% if request.GET.status == 'expiring' %}selected{% endif %}>即将到期</option>
-            </select>
+{% if request.GET.widget_mode %}
+    <!-- Widget 模式视图：新窗口中仅显示即将到期任务 -->
+    <div id="widgetContainer" onclick="window.close()">
+        <h5>即将到期任务</h5>
+        <div>
+            {% if soon_expiring_tasks %}
+                <ul class="list-unstyled">
+                    {% for task in soon_expiring_tasks %}
+                        <li>
+                            <strong>{{ task.title }}</strong><br>
+                            截止：{{ task.due_date|date:"Y-m-d H:i" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>暂无即将到期任务</p>
+            {% endif %}
         </div>
-        <div class="d-flex align-items-center ms-auto">
-            <!-- 显示当前时间（根据用户地区时区同步） -->
-            <div class="me-2">
-                <span id="currentTimeDisplay">{{ current_time|date:"H:i:s" }}</span>
-            </div>
-            <!-- 语言选择下拉框 -->
-            <div class="me-2">
-                <select id="languageSelect" class="form-select form-select-sm" onchange="onLanguageChange(this.value)">
-                    <option value="zh-hans" {% if LANGUAGE_CODE == 'zh-hans' %}selected{% endif %}>简体中文</option>
-                    <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
-                    <!-- 可根据需要添加更多语言选项 -->
+        <small>点击此窗口返回主页</small>
+    </div>
+{% else %}
+    <!-- 全主页视图 -->
+    <!-- 顶部切换按钮 -->
+    <div class="d-flex align-items-center ms-auto" style="padding: 1rem;">
+        <button id="widgetToggle" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-window"></i> 小组件模式
+        </button>
+    </div>
+    <div class="main-container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="time-filter">
+                <!-- 日期选择器 -->
+                <input type="date" id="calendarTrigger" value="{{ current_time|date:'Y-m-d' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
+                <select id="taskFilter" class="ms-2" onchange="onFilterChange(this.value)">
+                    <option value="unfinished" {% if request.GET.status == 'unfinished' or not request.GET.status %}selected{% endif %}>未完成</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>已完成</option>
+                    <option value="expiring" {% if request.GET.status == 'expiring' %}selected{% endif %}>即将到期</option>
                 </select>
             </div>
-            <!-- 用户头像 -->
-            <div class="user-avatar">
-                <a href="{% url 'profile' %}">
-                    <img src="{% static 'TaskSystemapp/images/default-avatar.png' %}" class="rounded-circle" width="40" height="40" alt="用户头像">
-                </a>
+            <div class="d-flex align-items-center ms-auto">
+                <!-- 显示当前时间 -->
+                <div class="me-2">
+                    <span id="currentTimeDisplay">{{ current_time|date:"H:i:s" }}</span>
+                </div>
+                <!-- 时区选择下拉框 -->
+                <div class="me-2">
+                    <select id="timezoneSelect" class="form-select form-select-sm" onchange="onTimezoneChange(this.value)">
+                        <option value="Asia/Shanghai">北京 (UTC+8)</option>
+                        <option value="Asia/Tokyo">东京 (UTC+9)</option>
+                        <option value="Asia/Singapore">新加坡 (UTC+8)</option>
+                        <option value="America/New_York">纽约 (UTC-5)</option>
+                        <option value="Europe/London">伦敦 (UTC+0)</option>
+                        <option value="Australia/Sydney">悉尼 (UTC+10)</option>
+                    </select>
+                </div>
+                <!-- 用户头像 -->
+                <div class="user-avatar">
+                    <a href="{% url 'profile' %}">
+                        <img src="{% static 'TaskSystemapp/images/default-avatar.png' %}" class="rounded-circle" width="40" height="40" alt="用户头像">
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- 滚动提醒区域 -->
+        <div class="ticker">
+            <div class="marquee">
+                <p>
+                    {% if soon_expiring_tasks %}
+                        {% for task in soon_expiring_tasks %}
+                            [{{ task.title }} 截止：{{ task.due_date|date:"Y-m-d H:i" }}] &nbsp;&nbsp;
+                        {% endfor %}
+                    {% else %}
+                        暂无即将到期任务
+                    {% endif %}
+                </p>
             </div>
         </div>
-    </header>
 
-    <!-- 滚动提醒区域：显示七日内即将到期任务 -->
-    <div class="ticker">
-        <div class="marquee">
-            <p>
-                {% if soon_expiring_tasks %}
-                    {% for task in soon_expiring_tasks %}
-                        [{{ task.title }} 截止：{{ task.due_date|date:"Y-m-d H:i" }}] &nbsp;&nbsp;
-                    {% endfor %}
-                {% else %}
-                    暂无即将到期任务
-                {% endif %}
-            </p>
-        </div>
-    </div>
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="mb-2">
+                <!-- 快速添加任务按钮 -->
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+                    ➕ 快速添加
+                </button>
+            </div>
+            <div class="task-list">
+                {% for task in sidebar_tasks %}
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            <h5>{{ task.title }}</h5>
+                        </a>
+                        <small class="text-muted">截止：{{ task.due_date|date:"Y-m-d H:i" }}</small>
+                        <br>
+                        {% if task.is_completed %}
+                            <span class="badge bg-success">已完成</span>
+                        {% elif task.is_expiring_soon %}
+                            <span class="badge bg-warning text-dark">即将到期</span>
+                        {% elif task.is_overdue %}
+                            <span class="badge bg-danger">已过期</span>
+                        {% else %}
+                            <span class="badge bg-secondary">未完成</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </aside>
 
-    <!-- 侧边栏 -->
-    <aside class="sidebar">
-        <div class="mb-2">
-            <!-- 快速添加任务按钮 -->
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
-                ➕ 快速添加
-            </button>
-        </div>
-        <div class="task-list">
-            {% for task in sidebar_tasks %}
-            <div class="card mb-2">
-                <div class="card-body">
-                    <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                        <h5>{{ task.title }}</h5>
-                    </a>
-                    <small class="text-muted">截止：{{ task.due_date|date:"Y-m-d H:i" }}</small>
-                    <br>
-                    {% if task.is_completed %}
+        <!-- 主内容区 -->
+        <main class="task-detail">
+            {% if selected_task %}
+                <div class="task-header">
+                    <h2>{{ selected_task.title }}</h2>
+                    <div class="task-meta">
+                        <span>优先级：{{ selected_task.get_priority_display }}</span> |
+                        <span>截止：{{ selected_task.due_date|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+                <div class="task-content mt-3">
+                    <p>{{ selected_task.description }}</p>
+                </div>
+                <div class="mt-3">
+                    {% if selected_task.is_completed %}
                         <span class="badge bg-success">已完成</span>
-                    {% elif task.is_expiring_soon %}
-                        <span class="badge bg-warning text-dark">即将到期</span>
-                    {% elif task.is_overdue %}
-                        <span class="badge bg-danger">已过期</span>
                     {% else %}
-                        <span class="badge bg-secondary">未完成</span>
+                        <a href="{% url 'complete_task' selected_task.id %}" class="btn btn-success btn-sm">标记为完成</a>
+                    {% endif %}
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteTask({{ selected_task.id }})">删除</button>
+                </div>
+            {% else %}
+                <!-- 未选定任务时显示搜索区域和创建任务按钮 -->
+                <div class="text-center p-5">
+                    <div class="mb-3">
+                        <input type="text" id="taskSearchInput" class="form-control" placeholder="搜索任务" value="{{ search_query }}">
+                        <button type="button" class="btn btn-secondary mt-2" onclick="searchTask()">搜索</button>
+                    </div>
+                    {% if search_query %}
+                        <h4>搜索结果</h4>
+                        <div class="list-group">
+                            {% for task in sidebar_tasks %}
+                                <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}&search={{ search_query }}" class="list-group-item list-group-item-action">
+                                    {{ task.title }} - 截止：{{ task.due_date|date:"Y-m-d H:i" }}
+                                </a>
+                            {% empty %}
+                                <p class="text-muted">没有匹配的任务</p>
+                            {% endfor %}
+                        </div>
+                        <!-- 创建任务按钮 -->
+                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
+                            创建任务
+                        </button>
+                    {% else %}
+                        <h4>未选定任务</h4>
+                        <!-- 创建任务按钮 -->
+                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
+                            创建任务
+                        </button>
                     {% endif %}
                 </div>
-            </div>
-            {% endfor %}
-        </div>
-    </aside>
-
-    <!-- 主内容区 -->
-    <main class="task-detail">
-        {% if selected_task %}
-            <div class="task-header">
-                <h2>{{ selected_task.title }}</h2>
-                <div class="task-meta">
-                    <span>优先级：{{ selected_task.get_priority_display }}</span> |
-                    <span>截止：{{ selected_task.due_date|date:"Y-m-d H:i" }}</span>
-                </div>
-            </div>
-            <div class="task-content mt-3">
-                <p>{{ selected_task.description }}</p>
-            </div>
-            <div class="mt-3">
-                {% if selected_task.is_completed %}
-                    <span class="badge bg-success">已完成</span>
-                {% else %}
-                    <a href="{% url 'complete_task' selected_task.id %}" class="btn btn-success btn-sm">标记为完成</a>
-                {% endif %}
-                <!-- 删除按钮 -->
-                <button type="button" class="btn btn-danger btn-sm" onclick="deleteTask({{ selected_task.id }})">删除</button>
-            </div>
-        {% else %}
-            <!-- 如果未选中任务，则展示搜索结果区域 -->
-            <div class="text-center p-5">
-                <div class="mb-3">
-                    <input type="text" id="taskSearchInput" class="form-control" placeholder="搜索任务" value="{{ search_query }}">
-                    <button type="button" class="btn btn-secondary mt-2" onclick="searchTask()">搜索</button>
-                </div>
-                {% if search_query %}
-                    <h4>搜索结果</h4>
-                    <div class="list-group">
-                        {% for task in sidebar_tasks %}
-                            <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}&search={{ search_query }}" class="list-group-item list-group-item-action">
-                                {{ task.title }} - 截止：{{ task.due_date|date:"Y-m-d H:i" }}
-                            </a>
-                        {% empty %}
-                            <p class="text-muted">没有匹配的任务</p>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <h4>还没有选中任何任务</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
-                        创建任务
-                    </button>
-                {% endif %}
-            </div>
-        {% endif %}
-    </main>
-</div>
-
-<!-- 快速添加任务 Modal -->
-<div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form id="quickAddForm" action="{% url 'quick_add_task' %}" method="post">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="quickAddModalLabel">快速添加任务</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
-        </div>
-        <div class="modal-body">
-          {{ quick_form.as_p }}
-          <small class="text-muted">请填写任务名称、优先级和截止日期（选择器），系统将在截止前2小时提醒。</small>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-          <button type="submit" class="btn btn-primary">添加任务</button>
-        </div>
-      </form>
+            {% endif %}
+        </main>
     </div>
-  </div>
-</div>
 
-<!-- 详细添加任务 Modal -->
-<div class="modal fade" id="detailedAddModal" tabindex="-1" aria-labelledby="detailedAddModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form id="detailedAddForm" action="{% url 'detailed_add_task' %}" method="post">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="detailedAddModalLabel">创建任务</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+    <!-- 快速添加任务 Modal -->
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="quickAddForm" action="{% url 'quick_add_task' %}" method="post">
+            {% csrf_token %}
+            <div class="modal-header">
+              <h5 class="modal-title" id="quickAddModalLabel">快速添加任务</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+              {{ quick_form.as_p }}
+              <small class="text-muted">请填写任务名称、优先级和截止日期。</small>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+              <button type="submit" class="btn btn-primary">添加任务</button>
+            </div>
+          </form>
         </div>
-        <div class="modal-body">
-          {{ detailed_form.as_p }}
-          <small class="text-muted">请填写任务名称、优先级、开始日期、截止日期（选择器）以及任务描述。</small>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-          <button type="submit" class="btn btn-primary">添加任务</button>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
-</div>
+
+    <!-- 详细添加任务 Modal -->
+    <div class="modal fade" id="detailedAddModal" tabindex="-1" aria-labelledby="detailedAddModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="detailedAddForm" action="{% url 'detailed_add_task' %}" method="post">
+            {% csrf_token %}
+            <div class="modal-header">
+              <h5 class="modal-title" id="detailedAddModalLabel">创建任务</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+              {{ detailed_form.as_p }}
+              <small class="text-muted">请填写任务名称、优先级、开始日期、截止日期及任务描述。</small>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+              <button type="submit" class="btn btn-primary">添加任务</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+{% endif %}
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% if not request.GET.widget_mode %}
 <script>
-    // 日期选择器改变时，更新 URL 参数（保留其它参数）
+    // 日期选择器改变时，更新 URL 参数
     function onCalendarChange(value) {
         const url = new URL(window.location.href);
         url.searchParams.set('date', value);
@@ -317,7 +381,7 @@
             });
         }
     }
-    // AJAX 提交快速添加任务表单（添加成功后刷新页面）
+    // AJAX 提交快速添加任务表单
     document.getElementById('quickAddForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const form = this;
@@ -326,18 +390,26 @@
             method: 'POST',
             body: formData,
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  const quickModal = bootstrap.Modal.getInstance(document.getElementById('quickAddModal'));
-                  quickModal.hide();
-                  window.location.reload();
-              } else {
-                  console.error('快速添加任务出错', data.errors);
-              }
-          }).catch(error => console.error('错误：', error));
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modalElem = document.getElementById('quickAddModal');
+                let quickModal = bootstrap.Modal.getInstance(modalElem);
+                if (!quickModal) {
+                    quickModal = new bootstrap.Modal(modalElem);
+                }
+                quickModal.hide();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            } else {
+                console.error('快速添加任务出错', data.errors);
+            }
+        })
+        .catch(error => console.error('错误：', error));
     });
-    // AJAX 提交详细添加任务表单（添加成功后刷新页面）
+    // AJAX 提交详细添加任务表单
     document.getElementById('detailedAddForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const form = this;
@@ -346,37 +418,56 @@
             method: 'POST',
             body: formData,
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  const detailedModal = bootstrap.Modal.getInstance(document.getElementById('detailedAddModal'));
-                  detailedModal.hide();
-                  window.location.reload();
-              } else {
-                  console.error('详细添加任务出错', data.errors);
-              }
-          }).catch(error => console.error('错误：', error));
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modalElem = document.getElementById('detailedAddModal');
+                let detailedModal = bootstrap.Modal.getInstance(modalElem);
+                if (!detailedModal) {
+                    detailedModal = new bootstrap.Modal(modalElem);
+                }
+                detailedModal.hide();
+                window.location.reload();
+            } else {
+                console.error('详细添加任务出错', data.errors);
+            }
+        })
+        .catch(error => console.error('错误：', error));
     });
-    // 语言选择更改：设置 django_language cookie 后刷新页面
-    function onLanguageChange(lang) {
-    document.cookie = "django_language=" + lang + ";path=/;max-age=31536000";
-    window.location.reload();
+    // 时区选择更改：保存到 cookie 后刷新时钟
+    function onTimezoneChange(tz) {
+        document.cookie = "user_timezone=" + tz + ";path=/;max-age=31536000";
+        updateClock();
     }
+    // 动态更新时钟，按照用户所选时区显示
     function updateClock() {
-    const clockElem = document.getElementById("currentTimeDisplay");
-    const now = new Date(); // 浏览器本地时间
-    let hours = now.getHours();
-    let minutes = now.getMinutes();
-    let seconds = now.getSeconds();
-    // 补零处理
-    hours = hours < 10 ? "0" + hours : hours;
-    minutes = minutes < 10 ? "0" + minutes : minutes;
-    seconds = seconds < 10 ? "0" + seconds : seconds;
-    clockElem.textContent = hours + ":" + minutes + ":" + seconds;
-}
-setInterval(updateClock, 1000);
-updateClock(); // 页面加载时立即执行一次
+        const userTimeZone = getCookie("user_timezone") || "Asia/Shanghai";
+        const now = new Date();
+        const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: userTimeZone };
+        const formatter = new Intl.DateTimeFormat([], options);
+        document.getElementById("currentTimeDisplay").textContent = formatter.format(now);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
+    // 点击页面其他区域清除任务选中（如果 URL 中有 task_id 参数）
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.task-detail') || e.target.closest('.sidebar') || e.target.closest('.modal')) {
+            return;
+        }
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('task_id')) {
+            url.searchParams.delete('task_id');
+            window.location.href = url.pathname + "?" + url.searchParams.toString();
+        }
+    });
+
+    // 小组件模式：点击按钮时通过 window.open 打开新窗口（带 widget_mode 参数）
+    document.getElementById('widgetToggle').addEventListener('click', function() {
+        window.open(window.location.pathname + "?widget_mode=1", "widgetWindow", "width=300,height=400,top=100,left=100,toolbar=no,scrollbars=no,resizable=yes");
+    });
 </script>
+{% endif %}
 </body>
 </html>
