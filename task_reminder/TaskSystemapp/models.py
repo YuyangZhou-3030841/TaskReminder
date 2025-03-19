@@ -6,8 +6,7 @@ from django.core.validators import RegexValidator
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings 
-def user_avatar_path(instance, filename):
-    return f'avatars/user_{instance.id}/{filename}'
+
 
 class CustomUser(AbstractUser):
     phone = models.CharField(
@@ -17,16 +16,12 @@ class CustomUser(AbstractUser):
     )
     email = models.EmailField(unique=True)
     region = models.CharField(max_length=50, blank=True)
-    avatar = models.ImageField(
-        upload_to='avatars/',
-        blank=True,
-        null=True
-    )
+    
 
     def __str__(self):
         return self.username
 
-# models.py
+
 
 
 class Task(models.Model):

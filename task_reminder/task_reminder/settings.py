@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-f(u=jb(s#!6d()ubrzh$9lz7j3vm=20858#@m2-tjmxo^4y2t8'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 CSRF_TRUSTED_ORIGINS = [
     "https://fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev",
 ]
@@ -125,17 +125,17 @@ LOCALE_PATHS = [BASE_DIR / 'locale']
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 AUTH_USER_MODEL = 'TaskSystemapp.CustomUser'
 LOGIN_URL = '/TaskSystemapp/login/'  # Customise the login path
 LOGIN_REDIRECT_URL = '/TaskSystemapp/home/'  # Jump path after successful login

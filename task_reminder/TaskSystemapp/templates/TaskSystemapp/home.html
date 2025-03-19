@@ -123,7 +123,6 @@
     </div>
     <script>
       function returnToHomepage() {
-          // If the main page exists and is not closed, close it and open a new one.
           if (window.opener && !window.opener.closed) {
               window.opener.close();
               window.open(window.location.origin + window.location.pathname, '_blank');
@@ -145,7 +144,6 @@
         <!-- head region -->
         <header class="header">
             <div class="time-filter">
-                <!-- Keeps the date input as text, controlled by flatpickr -->
                 <input type="text" id="calendarTrigger" value="{{ selected_date|date:'Y-m-d' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
                 <select id="taskFilter" class="ms-2" onchange="onFilterChange(this.value)">
                     <option value="unfinished" {% if request.GET.status == 'unfinished' or not request.GET.status %}selected{% endif %}>Unfinished</option>
@@ -167,14 +165,14 @@
                         <option value="Australia/Sydney">Sydney (UTC+10)</option>
                     </select>
                 </div>
+                <!-- Replace the former avatar area with a button showing the user's name -->
                 <div class="user-avatar">
-                    <a href="{% url 'profile' %}">
-                        <img src="{% if user.avatar %}{{ user.avatar.url }}?v={{ user.last_login.timestamp }}{% else %}{% static 'TaskSystemapp/images/default-avatar.png' %}{% endif %}"
-                             onerror="this.onerror=null; this.src='{% static 'TaskSystemapp/images/default-avatar.png' %}';"
-                             class="rounded-circle" width="40" height="40" alt="User Avatar">
-                    </a>
+                  <a href="{% url 'profile' %}">
+                    <button class="btn btn-primary">
+                      {{ user.username }}
+                    </button>
+                  </a>
                 </div>
-
             </div>
         </header>
 
@@ -193,175 +191,47 @@
             </div>
         </div>
 
-        <!-- Sidebar: Output task cards directly in order, without displaying group titles -->
+        <!-- Sidebar: Output task cards directly in order -->
         <aside class="sidebar">
-            <!-- Quick Add button at the top of the sidebar -->
             <div class="mb-2">
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
                     ➕ Quick add
                 </button>
             </div>
             {% if sidebar_tasks %}
-                {# The following loop outputs task cards by task status and priority #}
-                {# Expiring tasks: high priority #}
+                {# 输出任务卡片，这部分保持原样 #}
                 {% for task in sidebar_tasks %}
-                    {% if task.is_expiring_soon and task.priority == 'high' %}
                     <div class="card mb-2">
                         <div class="card-body">
                            <div class="d-flex justify-content-between align-items-center">
                                <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
                                    <h5>{{ task.title }}</h5>
                                </a>
-                               <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
+                               {% if task.priority == 'high' %}
+                                  <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
+                               {% elif task.priority == 'low' %}
+                                  <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
+                               {% else %}
+                                  <span class="badge bg-info">{{ task.get_priority_display }}</span>
+                               {% endif %}
                            </div>
                            <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-warning text-dark">Expiring</span>
+                           {% if task.is_completed %}
+                               <span class="badge bg-success">Done</span>
+                           {% elif task.is_expiring_soon %}
+                               <span class="badge bg-warning text-dark">Expiring</span>
+                           {% else %}
+                               <span class="badge bg-secondary">Unfinished</span>
+                           {% endif %}
                         </div>
                     </div>
-                    {% endif %}
-                {% endfor %}
-                {# Expiring tasks: medium priority #}
-                {% for task in sidebar_tasks %}
-                    {% if task.is_expiring_soon and task.priority == 'medium' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge bg-info">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-warning text-dark">Expiring</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Expiring tasks: low priority #}
-                {% for task in sidebar_tasks %}
-                    {% if task.is_expiring_soon and task.priority == 'low' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-warning text-dark">Expiring</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Unfinished tasks (non-expiring): high priority #}
-                {% for task in sidebar_tasks %}
-                    {% if not task.is_expiring_soon and not task.is_completed and task.priority == 'high' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-secondary">Unfinished</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Unfinished tasks (non-expiring): medium priority #}
-                {% for task in sidebar_tasks %}
-                    {% if not task.is_expiring_soon and not task.is_completed and task.priority == 'medium' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge bg-info">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-secondary">Unfinished</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Unfinished tasks (non-expiring): low priority #}
-                {% for task in sidebar_tasks %}
-                    {% if not task.is_expiring_soon and not task.is_completed and task.priority == 'low' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-secondary">Unfinished</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Completed tasks: high priority #}
-                {% for task in sidebar_tasks %}
-                    {% if task.is_completed and task.priority == 'high' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-success">Done</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Completed tasks: medium priority #}
-                {% for task in sidebar_tasks %}
-                    {% if task.is_completed and task.priority == 'medium' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge bg-info">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-success">Done</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {# Completed tasks: low priority #}
-                {% for task in sidebar_tasks %}
-                    {% if task.is_completed and task.priority == 'low' %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}&status={{ request.GET.status }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           <span class="badge bg-success">Done</span>
-                        </div>
-                    </div>
-                    {% endif %}
                 {% endfor %}
             {% else %}
                 <p class="text-muted">No tasks</p>
             {% endif %}
         </aside>
 
-        <!-- main content area -->
+        <!-- Main content area -->
         <main class="task-detail">
             {% if selected_task %}
                 <div class="task-header">
@@ -477,7 +347,6 @@
 <!-- Introduced flatpickr JS for calendar input box only. -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-    // Initialise flatpickr to apply only to #calendarTrigger
     window.addEventListener("DOMContentLoaded", function() {
         flatpickr("#calendarTrigger", {
             locale: "en",
@@ -487,7 +356,6 @@
                 onCalendarChange(dateStr);
             }
         });
-        // If the URL has a date parameter, set the value of the input box
         const params = new URLSearchParams(window.location.search);
         if (params.has("date")) {
             document.getElementById("calendarTrigger").value = params.get("date");
@@ -640,4 +508,3 @@
 {% endif %}
 </body>
 </html>
-
