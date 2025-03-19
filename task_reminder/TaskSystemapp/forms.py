@@ -41,7 +41,17 @@ class RegisterForm(UserCreationForm):
         if CustomUser.objects.filter(phone=phone).exists():
             raise forms.ValidationError("This mobile phone number has been registered")
         return phone
-  
+
+    def save(self, commit=True):
+        # Call the parent class's save method first to generate a user instance (not immediately submitted)
+        user = super().save(commit=False)
+        # If the user has uploaded an avatar, assign the avatar to the user instance
+        if self.cleaned_data.get('avatar'):
+            user.avatar = self.cleaned_data.get('avatar')
+        if commit:
+            user.save()
+        return user
+
 
 
 
@@ -70,3 +80,13 @@ class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'phone', 'region', 'avatar']
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # If the user uploads a new avatar, update the avatar field
+        if self.cleaned_data.get('avatar'):
+            user.avatar = self.cleaned_data.get('avatar')
+        if commit:
+            user.save()
+        return user
+

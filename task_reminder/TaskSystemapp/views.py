@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from datetime import timedelta, datetime
 from django.utils import timezone, translation
 from .forms import LoginForm, RegisterForm, QuickTaskForm, DetailedTaskForm, UserUpdateForm
-from .models import Task
+from .models import Task,CustomUser
 from django.conf import settings
 
 def custom_login(request):
@@ -38,89 +38,94 @@ def register(request):
 
 
 def home(request):
-    user = request.user
-    # Synchronise user time zones
-    if user.is_authenticated and user.region:
-        try:
-            timezone.activate(user.region)
-        except Exception:
-            timezone.deactivate()
-    if user.is_authenticated and hasattr(user, 'language'):
-        translation.activate(user.language)
-    else:
-        translation.activate(settings.LANGUAGE_CODE)
+        # 重新获取最新的用户实例
+        if request.user.is_authenticated:
+            user = CustomUser.objects.get(pk=request.user.pk)
+        else:
+            user = request.user
 
-    current_time = timezone.now()
+        # Synchronise user time zones
+        if user.is_authenticated and user.region:
+            try:
+                timezone.activate(user.region)
+            except Exception:
+                timezone.deactivate()
+        if user.is_authenticated and hasattr(user, 'language'):
+            translation.activate(user.language)
+        else:
+            translation.activate(settings.LANGUAGE_CODE)
 
-    filter_status = request.GET.get('status', 'unfinished')
-    search_query = request.GET.get('search', '').strip()
-    date_str = request.GET.get('date')
-    if date_str:
-        try:
-            # Converts the date string passed in by the user into a date object (note that datetime is generated here with no time zone)
-            current_date = datetime.strptime(date_str, "%Y-%m-%d")
-        except Exception:
+        current_time = timezone.now()
+
+        filter_status = request.GET.get('status', 'unfinished')
+        search_query = request.GET.get('search', '').strip()
+        date_str = request.GET.get('date')
+        if date_str:
+            try:
+                # Convert the date string (without time zone) into a date object
+                current_date = datetime.strptime(date_str, "%Y-%m-%d")
+            except Exception:
+                current_date = current_time
+        else:
             current_date = current_time
-    else:
-        current_date = current_time
 
-    # Filtering of tasks according to user-selected dates (only tasks with a deadline whose date portion is equal to the selected date are retained)
-    user_tasks = Task.objects.filter(user=user, due_date__date=current_date.date())
+        # Filtering tasks according to the selected date (only tasks with due_date equal to selected date)
+        user_tasks = Task.objects.filter(user=user, due_date__date=current_date.date())
 
-    if search_query:
-        task_list = list(user_tasks)
-        def priority_order(task):
-            mapping = {'high': 1, 'medium': 2, 'low': 3}
-            return mapping.get(task.priority, 4)
-        filtered_tasks = []
-        for task in task_list:
-            count = task.title.lower().count(search_query.lower())
-            if count > 0:
-                filtered_tasks.append((task, count))
-        filtered_tasks.sort(key=lambda x: (-x[1], priority_order(x[0])))
-        user_tasks = [item[0] for item in filtered_tasks]
-    else:
-        if filter_status == 'completed':
-            user_tasks = user_tasks.filter(is_completed=True)
-        elif filter_status == 'unfinished':
-            user_tasks = user_tasks.filter(is_completed=False)
-        elif filter_status == 'expiring':
-            # If the expiring status is selected, the filtering is still based on the current time, but note that there may be a contradiction here with the date selected
-            user_tasks = user_tasks.filter(
-                is_completed=False,
-                due_date__lte=current_time + timedelta(days=7),
-                due_date__gte=current_time
-            )
-        user_tasks = user_tasks.order_by('due_date')
+        if search_query:
+            task_list = list(user_tasks)
+            def priority_order(task):
+                mapping = {'high': 1, 'medium': 2, 'low': 3}
+                return mapping.get(task.priority, 4)
+            filtered_tasks = []
+            for task in task_list:
+                count = task.title.lower().count(search_query.lower())
+                if count > 0:
+                    filtered_tasks.append((task, count))
+            filtered_tasks.sort(key=lambda x: (-x[1], priority_order(x[0])))
+            user_tasks = [item[0] for item in filtered_tasks]
+        else:
+            if filter_status == 'completed':
+                user_tasks = user_tasks.filter(is_completed=True)
+            elif filter_status == 'unfinished':
+                user_tasks = user_tasks.filter(is_completed=False)
+            elif filter_status == 'expiring':
+                user_tasks = user_tasks.filter(
+                    is_completed=False,
+                    due_date__lte=current_time + timedelta(days=7),
+                    due_date__gte=current_time
+                )
+            user_tasks = user_tasks.order_by('due_date')
 
-    sidebar_tasks = user_tasks
+        sidebar_tasks = user_tasks
 
-    # For the scrolling reminder area, the original upcoming tasks logic is maintained here (not based on the selected date)
-    soon_expiring_tasks = Task.objects.filter(
-        user=user,
-        is_completed=False,
-        due_date__lte=current_time + timedelta(days=7),
-        due_date__gte=current_time
-    ).order_by('due_date')
+        soon_expiring_tasks = Task.objects.filter(
+            user=user,
+            is_completed=False,
+            due_date__lte=current_time + timedelta(days=7),
+            due_date__gte=current_time
+        ).order_by('due_date')
 
-    selected_task_id = request.GET.get('task_id')
-    selected_task = None
-    if selected_task_id:
-        try:
-            selected_task = Task.objects.get(pk=selected_task_id, user=user)
-        except Task.DoesNotExist:
-            selected_task = None
+        selected_task_id = request.GET.get('task_id')
+        selected_task = None
+        if selected_task_id:
+            try:
+                selected_task = Task.objects.get(pk=selected_task_id, user=user)
+            except Task.DoesNotExist:
+                selected_task = None
 
-    context = {
-        'sidebar_tasks': sidebar_tasks,
-        'soon_expiring_tasks': soon_expiring_tasks,
-        'selected_task': selected_task,
-        'quick_form': QuickTaskForm(),
-        'detailed_form': DetailedTaskForm(),
-        'current_time': current_time,
-        'search_query': search_query,
-    }
-    return render(request, 'TaskSystemapp/home.html', context)
+        context = {
+            'sidebar_tasks': sidebar_tasks,
+            'soon_expiring_tasks': soon_expiring_tasks,
+            'selected_task': selected_task,
+            'quick_form': QuickTaskForm(),
+            'detailed_form': DetailedTaskForm(),
+            'current_time': current_time,
+            'search_query': search_query,
+            'user': user,  # 传递最新的用户实例
+        }
+        return render(request, 'TaskSystemapp/home.html', context)
+
 def task_events(request):
     tasks = Task.objects.filter(user=request.user)
     events = []
@@ -144,8 +149,7 @@ def detailed_add_task(request):
             return JsonResponse({'success': False, 'errors': form.errors})
     return redirect('home')
 
-def user_profile(request):
-    return render(request, 'TaskSystemapp/profile.html', {'user': request.user})
+
 
 def complete_task(request, task_id):
     task = get_object_or_404(Task, pk=task_id, user=request.user)
@@ -179,10 +183,13 @@ def profile(request):
         form = UserUpdateForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
+            # 刷新当前用户实例，确保最新数据被加载
+            request.user.refresh_from_db()
             return redirect('profile')
     else:
         form = UserUpdateForm(instance=request.user)
     return render(request, 'TaskSystemapp/profile.html', {'form': form, 'user': request.user})
+
 
 def custom_logout(request):
     logout(request)

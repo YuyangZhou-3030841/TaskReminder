@@ -66,13 +66,22 @@
             <div class="form-group d-flex align-items-center">
                 <label for="id_avatar" class="form-label">Avatar</label>
                 <div class="flex-grow-1">
-                    <!-- Customise file inputs to hide native controls -->
+                    <!-- Hidden file input -->
                     <input type="file" class="form-control d-none" id="id_avatar" name="avatar" disabled>
+                    <!-- Customising the file selection buttons -->
                     <label for="id_avatar" class="btn btn-outline-secondary" id="avatarLabel">Choose file</label>
-                    <span id="fileName" class="ms-2">No file chosen</span>
+                    <!-- Display alert text based on the presence or absence of a user's avatar -->
+                    <span id="fileName" class="ms-2">
+                        {% if user.avatar %}
+                            (Existing file)
+                        {% else %}
+                            No file chosen
+                        {% endif %}
+                    </span>
                 </div>
                 <button type="button" class="btn btn-outline-primary edit-btn" data-target="id_avatar">modify</button>
             </div>
+
             <!-- Save Changes button -->
             <div class="text-center mb-3">
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -125,4 +134,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-

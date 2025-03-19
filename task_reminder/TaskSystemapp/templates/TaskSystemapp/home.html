@@ -46,7 +46,7 @@
       .main-container {
           display: grid;
           grid-template-columns: var(--sidebar-width) 1fr;
-          grid-template-rows: auto 1fr;  /* 包含 ticker 区域 */
+          grid-template-rows: auto 1fr;  /* Contains ticker area*/
           min-height: 100vh;
           background: var(--main-bg);
       }
@@ -123,7 +123,7 @@
     </div>
     <script>
       function returnToHomepage() {
-          // If the main page exists and is not closed, close the original home page and open a new one.
+          // If the main page exists and is not closed, close it and open a new one.
           if (window.opener && !window.opener.closed) {
               window.opener.close();
               window.open(window.location.origin + window.location.pathname, '_blank');
@@ -145,7 +145,7 @@
         <!-- head region -->
         <header class="header">
             <div class="time-filter">
-                <!-- Keeps the date input as text, controlled by flatpickr, with the value passed in by selected_date. -->
+                <!-- Keeps the date input as text, controlled by flatpickr -->
                 <input type="text" id="calendarTrigger" value="{{ selected_date|date:'Y-m-d' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
                 <select id="taskFilter" class="ms-2" onchange="onFilterChange(this.value)">
                     <option value="unfinished" {% if request.GET.status == 'unfinished' or not request.GET.status %}selected{% endif %}>Unfinished</option>
@@ -169,9 +169,12 @@
                 </div>
                 <div class="user-avatar">
                     <a href="{% url 'profile' %}">
-                        <img src="{% static 'TaskSystemapp/images/default-avatar.png' %}" class="rounded-circle" width="40" height="40" alt="User Avatar">
+                        <img src="{% if user.avatar %}{{ user.avatar.url }}?v={{ user.last_login.timestamp }}{% else %}{% static 'TaskSystemapp/images/default-avatar.png' %}{% endif %}"
+                             onerror="this.onerror=null; this.src='{% static 'TaskSystemapp/images/default-avatar.png' %}';"
+                             class="rounded-circle" width="40" height="40" alt="User Avatar">
                     </a>
                 </div>
+
             </div>
         </header>
 
@@ -190,17 +193,17 @@
             </div>
         </div>
 
-        <!-- 侧边栏：直接依次输出任务卡片，不显示分组标题 -->
+        <!-- Sidebar: Output task cards directly in order, without displaying group titles -->
         <aside class="sidebar">
-            <!-- 侧边栏顶部快速添加按钮 -->
+            <!-- Quick Add button at the top of the sidebar -->
             <div class="mb-2">
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
                     ➕ Quick add
                 </button>
             </div>
             {% if sidebar_tasks %}
-                {# The following loop outputs the task cards in order of task status and priority #}
-                {# Expiring tasks：high priority #}
+                {# The following loop outputs task cards by task status and priority #}
+                {# Expiring tasks: high priority #}
                 {% for task in sidebar_tasks %}
                     {% if task.is_expiring_soon and task.priority == 'high' %}
                     <div class="card mb-2">
@@ -217,7 +220,7 @@
                     </div>
                     {% endif %}
                 {% endfor %}
-                {# Expiring tasks：medium priority #}
+                {# Expiring tasks: medium priority #}
                 {% for task in sidebar_tasks %}
                     {% if task.is_expiring_soon and task.priority == 'medium' %}
                     <div class="card mb-2">
@@ -234,7 +237,7 @@
                     </div>
                     {% endif %}
                 {% endfor %}
-                {# Expiring tasks：low priority #}
+                {# Expiring tasks: low priority #}
                 {% for task in sidebar_tasks %}
                     {% if task.is_expiring_soon and task.priority == 'low' %}
                     <div class="card mb-2">
@@ -319,7 +322,7 @@
                     </div>
                     {% endif %}
                 {% endfor %}
-                {# Completed tasks: 中优先级 #}
+                {# Completed tasks: medium priority #}
                 {% for task in sidebar_tasks %}
                     {% if task.is_completed and task.priority == 'medium' %}
                     <div class="card mb-2">

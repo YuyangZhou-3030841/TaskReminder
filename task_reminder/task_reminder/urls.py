@@ -27,4 +27,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('TaskSystemapp/', include('TaskSystemapp.urls')),  # User-Related Routing
     path('', RedirectView.as_view(url='/TaskSystemapp/login/')),  # Root path redirection to login page
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
