@@ -9,19 +9,19 @@ class LoginForm(forms.Form):
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
-        label="电子邮箱",
-        help_text="请输入有效的邮箱地址"
+        label="E-mail",
+        help_text="Please enter a valid email address"
     )
     phone = forms.CharField(
         required=True,
         max_length=15,
-        label="手机号码",
-        help_text="国际格式（例：+8613812345678）"
+        label="Telephone Number",
+        help_text="International format (example: +44 01234 56789-0)"
     )
     avatar = forms.ImageField(
         required=False,
-        label="用户头像",
-        help_text="可选，建议尺寸 200x200 像素"
+        label="Avatar",
+        help_text="Optional, recommended size 200x200 pixels"
     )
 
     class Meta:
@@ -31,17 +31,17 @@ class RegisterForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if CustomUser.objects.filter(email=email).exists():
-            raise forms.ValidationError("该邮箱已被注册")
+            raise forms.ValidationError("This email address is already registered")
         return email
 
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
         if not phone.startswith('+'):
-            raise forms.ValidationError("请使用国际格式（例如：+86开头）")
+            raise forms.ValidationError("Please use the international format (e.g., beginning with +44)")
         if CustomUser.objects.filter(phone=phone).exists():
-            raise forms.ValidationError("该手机号已被注册")
+            raise forms.ValidationError("This mobile phone number has been registered")
         return phone
-    # task_reminder/TaskSystemapp/forms.py
+  
 
 
 
@@ -49,17 +49,17 @@ class RegisterForm(UserCreationForm):
 class QuickTaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        # 快速添加只需填写任务名称、优先级和截止时间
+        # Quick add just fill in the task name, priority and deadline
         fields = ['title', 'priority', 'due_date']
         widgets = {
-            # 使用 datetime-local 输入类型，使浏览器显示选择器
+            # Use the datetime-local input type to make the browser display the selector
             'due_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
 
 class DetailedTaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        # 详细添加需填写任务名称、优先级、开始日期、截止日期和任务描述
+        # Detailed additions need to be filled in with task name, priority, start date, deadline and task description
         fields = ['title', 'priority', 'start_date', 'due_date', 'description']
         widgets = {
             'start_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),

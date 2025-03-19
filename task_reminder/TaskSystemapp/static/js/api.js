@@ -1,4 +1,4 @@
-// 在所有请求头中添加CSRF Token
+// Add CSRF Token to all request headers
 axios.interceptors.request.use(config => {
     config.headers['X-CSRFToken'] = getCookie('csrftoken');
     return config;

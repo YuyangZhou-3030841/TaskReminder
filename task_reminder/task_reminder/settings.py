@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-f(u=jb(s#!6d()ubrzh$9lz7j3vm=20858#@m2-tjmxo^4y2t8'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 CSRF_TRUSTED_ORIGINS = [
     "https://fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev",
 ]
@@ -34,7 +34,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    "TaskSystemapp.apps.TaskSystemConfig",  #添加的应用
+    "TaskSystemapp.apps.TaskSystemConfig",  #Applications added
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'task_reminder.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'world.sqlite3',  # 明确指向你的数据库文件
+        'NAME': BASE_DIR / 'world.sqlite3',  # Clearly point to database files
     }
 }
 
@@ -115,15 +115,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 USE_I18N = True
 
-TIME_ZONE = 'UTC'  # 数据库存储使用UTC
+TIME_ZONE = 'UTC'  # Database storage using UTC
 USE_TZ = True
 
-# 国际化设置
-LANGUAGE_CODE = 'zh-hans'
-LANGUAGES = [
-    ('zh-hans', '简体中文'),
-    ('en', 'English'),
-]
+# Internationalisation
+LANGUAGE_CODE = 'en-us'
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
 # Static files (CSS, JavaScript, Images)
@@ -138,17 +134,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 AUTH_USER_MODEL = 'TaskSystemapp.CustomUser'
-LOGIN_URL = '/TaskSystemapp/login/'  # 自定义登录路径
-LOGIN_REDIRECT_URL = '/TaskSystemapp/home/'  # 登录成功后跳转路径
+LOGIN_URL = '/TaskSystemapp/login/'  # Customise the login path
+LOGIN_REDIRECT_URL = '/TaskSystemapp/home/'  # Jump path after successful login
 ASGI_APPLICATION = 'task_reminder.routing.application'
 
-# Celery 配置
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.example.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'catalyzator024@gmail.com'
-EMAIL_HOST_PASSWORD = 'catalyzator024@gmail.com'
-DEFAULT_FROM_EMAIL = 'catalyzator024@gmail.com'
+

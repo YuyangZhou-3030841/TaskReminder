@@ -1,4 +1,4 @@
-// 在原有任务列表初始化后添加
+// Added after the initialisation of the original task list
 import { VirtualScroll } from 'virtual-scroll';
 
 const vs = new VirtualScroll({
@@ -15,5 +15,5 @@ const vs = new VirtualScroll({
     }
 });
 
-// 数据更新时
+// When updating data
 vs.updateData(allTasks);

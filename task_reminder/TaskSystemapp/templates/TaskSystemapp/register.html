@@ -1,9 +1,9 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>用户注册</title>
+    <title>User Register</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
         .auth-container {
@@ -84,7 +84,9 @@
 <body>
     <div class="auth-container">
         <div class="auth-card">
-            <h2 class="auth-title">用户注册</h2>
+            <h2 class="auth-title">User Register</h2>
+            <!-- For displaying custom error alerts -->
+            <div id="clientErrors" class="error-message"></div>
             {% if form.errors %}
             <div class="error-message">
                 {% for field in form %}
@@ -97,51 +99,155 @@
                 {% endfor %}
             </div>
             {% endif %}
-            <form method="post" enctype="multipart/form-data">
+            <!-- Add the novalidate attribute to the form to disable native browser validation. -->
+            <form method="post" enctype="multipart/form-data" novalidate id="registerForm">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label class="form-label">用户名</label>
-                    <input type="text" class="form-control" name="username" value="{{ form.username.value|default_if_none:'' }}" required>
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" name="username" placeholder="Enter your username" value="{{ form.username.value|default_if_none:'' }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">邮箱</label>
-                    <input type="email" class="form-control" name="email" value="{{ form.email.value|default_if_none:'' }}" required>
+                    <label class="form-label">E-mail</label>
+                    <input type="email" class="form-control" name="email" placeholder="Enter a valid email address" value="{{ form.email.value|default_if_none:'' }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">密码</label>
-                    <input type="password" class="form-control" name="password1" required>
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" name="password1" placeholder="Enter your password" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">确认密码</label>
-                    <input type="password" class="form-control" name="password2" required>
+                    <label class="form-label">Confirm password</label>
+                    <input type="password" class="form-control" name="password2" placeholder="Confirm your password" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">手机号</label>
-                    <input type="text" class="form-control" name="phone" value="{{ form.phone.value|default_if_none:'' }}" required>
+                    <label class="form-label">Telephone number</label>
+                    <input type="text" class="form-control" name="phone" placeholder="Enter your telephone number in international format" value="{{ form.phone.value|default_if_none:'' }}" required>
                 </div>
-                <!-- 地区选择：采用下拉框，选项中包含时区信息 -->
+                <!-- Region selection with time zone information -->
                 <div class="form-group">
-                    <label class="form-label">地区</label>
+                    <label class="form-label">Region</label>
                     <select class="form-control" name="region" required>
-                        <option value="">请选择地区</option>
-                        <option value="Asia/Shanghai" {% if form.region.value == "Asia/Shanghai" %}selected{% endif %}>北京/上海/广州/深圳 (UTC+8)</option>
-                        <option value="Asia/Tokyo" {% if form.region.value == "Asia/Tokyo" %}selected{% endif %}>东京 (UTC+9)</option>
-                        <option value="Asia/Singapore" {% if form.region.value == "Asia/Singapore" %}selected{% endif %}>新加坡 (UTC+8)</option>
-                        <option value="America/New_York" {% if form.region.value == "America/New_York" %}selected{% endif %}>纽约 (UTC-5)</option>
-                        <option value="Europe/London" {% if form.region.value == "Europe/London" %}selected{% endif %}>伦敦 (UTC+0)</option>
-                        <option value="Australia/Sydney" {% if form.region.value == "Australia/Sydney" %}selected{% endif %}>悉尼 (UTC+10)</option>
+                        <option value="">Please select a region</option>
+                        <option value="Asia/Shanghai" {% if form.region.value == "Asia/Shanghai" %}selected{% endif %}>Beijing (UTC+8)</option>
+                        <option value="Asia/Tokyo" {% if form.region.value == "Asia/Tokyo" %}selected{% endif %}>Tokyo (UTC+9)</option>
+                        <option value="Asia/Singapore" {% if form.region.value == "Asia/Singapore" %}selected{% endif %}>Singapore (UTC+8)</option>
+                        <option value="America/New_York" {% if form.region.value == "America/New_York" %}selected{% endif %}>New York (UTC-5)</option>
+                        <option value="Europe/London" {% if form.region.value == "Europe/London" %}selected{% endif %}>London (UTC+0)</option>
+                        <option value="Australia/Sydney" {% if form.region.value == "Australia/Sydney" %}selected{% endif %}>Sydney (UTC+10)</option>
                     </select>
                 </div>
+                <!-- Avatar upload -->
                 <div class="form-group">
-                    <label class="form-label">头像</label>
-                    <input type="file" class="form-control" name="avatar">
+                    <label class="form-label" for="id_avatar">Avatar</label>
+                    <div class="d-flex align-items-center">
+                        <input type="file" id="id_avatar" name="avatar" style="display: none;" disabled>
+                        <button type="button" class="btn btn-outline-secondary" id="chooseFileButton">Choose file</button>
+                        <span id="fileName" class="ms-2">No file chosen</span>
+                    </div>
                 </div>
-                <button type="submit" class="submit-btn">立即注册</button>
+                <button type="submit" class="submit-btn">Submit</button>
                 <div class="switch-link">
-                    已有账户？ <a href="{% url 'login' %}">立即登录</a>
+                    Existing accounts? <a href="{% url 'login' %}">Sign in now</a>
                 </div>
             </form>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form Custom Validation
+        var form = document.getElementById('registerForm');
+        form.addEventListener('submit', function(e) {
+            var errors = [];
+
+            // Validate username
+            var username = form.elements['username'].value.trim();
+            if (!username) {
+                errors.push("Please enter your username.");
+            }
+            // Validate email
+            var email = form.elements['email'].value.trim();
+            if (!email) {
+                errors.push("Please enter your email address.");
+            } else {
+                if (!email.includes('@')) {
+                    errors.push("Email address must contain '@'.");
+                }
+                if (!email.includes('.com')) {
+                    errors.push("Email address must contain '.com'.");
+                }
+                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    errors.push("Please enter a valid email address.");
+                }
+            }
+            // Validate password1
+            var password1 = form.elements['password1'].value;
+            if (!password1) {
+                errors.push("Please enter your password.");
+            }
+            // Validate password2
+            var password2 = form.elements['password2'].value;
+            if (!password2) {
+                errors.push("Please confirm your password.");
+            }
+            if (password1 && password2 && password1 !== password2) {
+                errors.push("Passwords do not match.");
+            }
+            // Validate phone
+            var phone = form.elements['phone'].value.trim();
+            if (!phone) {
+                errors.push("Please enter your telephone number.");
+            } else if (!phone.startsWith('+')) {
+                errors.push("Please use the international format (e.g., starting with +44).");
+            }
+            // Validate region
+            var region = form.elements['region'].value;
+            if (!region) {
+                errors.push("Please select a region.");
+            }
+
+            // If there is an error, the commit is blocked and an error message is displayed
+            var errorContainer = document.getElementById('clientErrors');
+            if (errors.length > 0) {
+                e.preventDefault();
+                errorContainer.innerHTML = errors.join("<br>");
+            }
+        });
+
+        // Add an event to the modify button to disable and focus the corresponding input box.
+        document.querySelectorAll('.edit-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                var field = document.getElementById(targetId);
+                if (field) {
+                    field.removeAttribute('disabled');
+                    field.focus();
+                }
+            });
+        });
+
+        // Ensure data submission by unlocking all disabled properties before form submission
+        form.addEventListener('submit', function() {
+            this.querySelectorAll('input[disabled], select[disabled]').forEach(function(field) {
+                field.removeAttribute('disabled');
+            });
+        });
+
+        // Custom file input: Avatar
+        var chooseFileButton = document.getElementById('chooseFileButton');
+        var fileInput = document.getElementById('id_avatar');
+        var fileNameSpan = document.getElementById('fileName');
+        chooseFileButton.addEventListener('click', function() {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                fileNameSpan.textContent = this.files[0].name;
+            } else {
+                fileNameSpan.textContent = 'No file chosen';
+            }
+        });
+    });
+    </script>
 </body>
 </html>

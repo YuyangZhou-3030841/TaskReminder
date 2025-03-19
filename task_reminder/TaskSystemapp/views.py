@@ -20,25 +20,26 @@ def custom_login(request):
                 login(request, user)
                 return redirect('home')
             else:
-                error = "用户名或密码错误"
+                error = "Incorrect username or password"
     else:
         form = LoginForm()
     return render(request, 'TaskSystemapp/login.html', {'form': form, 'error': error})
 
 def register(request):
     if request.method == 'POST':
-        form = RegisterForm(request.POST, request.FILES)  # 注意接收FILES
+        form = RegisterForm(request.POST, request.FILES)  # Attention to receiving FILES
         if form.is_valid():
             user = form.save()
             return redirect('login')
-        # 表单无效时保留已填数据
+        # Retention of filled-in data in case of invalid forms
     else:
         form = RegisterForm()
     return render(request, 'TaskSystemapp/register.html', {'form': form})
 
+
 def home(request):
     user = request.user
-    # 同步用户时区
+    # Synchronise user time zones
     if user.is_authenticated and user.region:
         try:
             timezone.activate(user.region)
@@ -56,13 +57,15 @@ def home(request):
     date_str = request.GET.get('date')
     if date_str:
         try:
+            # Converts the date string passed in by the user into a date object (note that datetime is generated here with no time zone)
             current_date = datetime.strptime(date_str, "%Y-%m-%d")
         except Exception:
             current_date = current_time
     else:
         current_date = current_time
 
-    user_tasks = Task.objects.filter(user=user)
+    # Filtering of tasks according to user-selected dates (only tasks with a deadline whose date portion is equal to the selected date are retained)
+    user_tasks = Task.objects.filter(user=user, due_date__date=current_date.date())
 
     if search_query:
         task_list = list(user_tasks)
@@ -82,6 +85,7 @@ def home(request):
         elif filter_status == 'unfinished':
             user_tasks = user_tasks.filter(is_completed=False)
         elif filter_status == 'expiring':
+            # If the expiring status is selected, the filtering is still based on the current time, but note that there may be a contradiction here with the date selected
             user_tasks = user_tasks.filter(
                 is_completed=False,
                 due_date__lte=current_time + timedelta(days=7),
@@ -90,6 +94,8 @@ def home(request):
         user_tasks = user_tasks.order_by('due_date')
 
     sidebar_tasks = user_tasks
+
+    # For the scrolling reminder area, the original upcoming tasks logic is maintained here (not based on the selected date)
     soon_expiring_tasks = Task.objects.filter(
         user=user,
         is_completed=False,
@@ -115,7 +121,6 @@ def home(request):
         'search_query': search_query,
     }
     return render(request, 'TaskSystemapp/home.html', context)
-
 def task_events(request):
     tasks = Task.objects.filter(user=request.user)
     events = []
@@ -155,7 +160,7 @@ def delete_task(request, task_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
         return redirect('home')
-    return JsonResponse({'success': False, 'error': '无效的请求方式'})
+    return JsonResponse({'success': False, 'error': 'Invalid modalities of request'})
 
 def quick_add_task(request):
     if request.method == 'POST':
@@ -164,7 +169,6 @@ def quick_add_task(request):
             task = form.save(commit=False)
             task.user = request.user
             task.save()
-            # 移除邮件发送部分，直接返回成功
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})

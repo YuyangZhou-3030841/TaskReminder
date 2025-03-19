@@ -25,6 +25,6 @@ from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('TaskSystemapp/', include('TaskSystemapp.urls')),  # 用户相关路由
-    path('', RedirectView.as_view(url='/TaskSystemapp/login/')),  # 根路径重定向到登录页
+    path('TaskSystemapp/', include('TaskSystemapp.urls')),  # User-Related Routing
+    path('', RedirectView.as_view(url='/TaskSystemapp/login/')),  # Root path redirection to login page
 ]

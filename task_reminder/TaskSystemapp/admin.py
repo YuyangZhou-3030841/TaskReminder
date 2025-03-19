@@ -8,7 +8,7 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'email', 'phone')
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('个人信息', {'fields': ('email', 'phone', 'region', 'avatar')}),
+        ('Personal Information', {'fields': ('email', 'phone', 'region', 'avatar')}),
     )
 
 admin.site.register(CustomUser, CustomUserAdmin)
