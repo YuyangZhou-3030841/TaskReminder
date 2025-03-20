@@ -106,7 +106,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Telephone number</label>
-          <input type="text" class="form-control" name="phone" placeholder="Enter your telephone number in international format" value="{{ form.phone.value|default_if_none:'' }}" required>
+          <input type="text" class="form-control" name="phone" placeholder="Enter as +4401234 56789-0" value="{{ form.phone.value|default_if_none:'' }}" required>
         </div>
         <div class="form-group">
           <label class="form-label">Region</label>
@@ -167,7 +167,7 @@
         if (!phone) {
           errors.push("Please enter your telephone number.");
         } else if (!phone.startsWith('+')) {
-          errors.push("Please use the international format (e.g., starting with +44).");
+          errors.push("Please use as +4401234 56789-0");
         }
         var region = form.elements['region'].value;
         if (!region) {
