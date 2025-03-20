@@ -28,7 +28,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 ALLOWED_HOSTS = [
-    'fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev'
+    'fb4cdd94-f4b7-41a9-bab4-35c8cf1e1a13-00-151m0ua8zse92.worf.replit.dev',
+    '127.0.0.1',
 ]
 
 # Application definition
@@ -41,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_celery_results',
     'channels',
     'corsheaders',
 ]

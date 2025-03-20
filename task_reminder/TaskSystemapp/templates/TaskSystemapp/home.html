@@ -1,547 +1,251 @@
+{% extends "TaskSystemapp/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{% if request.GET.widget_mode %}Widget Mode{% else %}Task Management Centre{% endif %}</title>
-    <!-- Bootstrap CSS & Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+{% block title %}
+    {% if request.GET.widget_mode %}Widget Mode{% else %}Task Management Centre{% endif %}
+{% endblock %}
+
+{% block extra_head %}
     {% if request.GET.widget_mode %}
-    <!-- Styles in Widget Mode (New Window) -->
-    <style>
-       html, body {
-         margin: 0;
-         padding: 0;
-         background: transparent;
-         overflow: hidden;
-         height: 100%;
-       }
-       #widgetContainer {
-         width: 100%;
-         height: 100%;
-         display: flex;
-         flex-direction: column;
-         justify-content: center;
-         align-items: center;
-         background: rgba(255, 255, 255, 0.9);
-         border: 1px solid #ccc;
-         border-radius: 5px;
-         padding: 1rem;
-         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-       }
-    </style>
+        <!-- Widget Mode Style -->
+        <link rel="stylesheet" href="{% static 'css/widget.css' %}">
     {% else %}
-    <!-- Full homepage style-->
-    <style>
-      :root {
-          --sidebar-width: 280px;
-          --header-height: 60px;
-          --main-bg: #f8f9fa;
-      }
-      body {
-          margin: 0;
-          padding: 0;
-      }
-      .main-container {
-          display: grid;
-          grid-template-columns: var(--sidebar-width) 1fr;
-          grid-template-rows: auto 1fr;
-          min-height: 100vh;
-          background: var(--main-bg);
-      }
-      .header {
-          grid-column: 1 / -1;
-          display: flex;
-          align-items: center;
-          padding: 0 2rem;
-          background: white;
-          border-bottom: 1px solid #dee2e6;
-          z-index: 200;
-      }
-      .ticker {
-          grid-column: 1 / -1;
-          background: #ffeeba;
-          color: #856404;
-          padding: 5px 1rem;
-          font-size: 14px;
-          border-bottom: 1px solid #ffeeba;
-      }
-      .sidebar {
-          padding: 1.5rem;
-          border-right: 1px solid #dee2e6;
-          background: #f2f2f2;
-          height: calc(100vh - var(--header-height) - 40px);
-          overflow-y: auto;
-      }
-      .task-detail {
-          padding: 2rem;
-          background: white;
-          height: calc(100vh - var(--header-height) - 40px);
-          overflow-y: auto;
-      }
-      .marquee {
-          white-space: nowrap;
-          overflow: hidden;
-          box-sizing: border-box;
-      }
-      .marquee p {
-          display: inline-block;
-          padding-left: 100%;
-          animation: marquee 15s linear infinite;
-          margin: 0;
-      }
-      @keyframes marquee {
-          0%   { transform: translate(0, 0); }
-          100% { transform: translate(-100%, 0); }
-      }
-    </style>
-    <!-- Introducing flatpickr CSS for calendar input boxes only -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <!-- Home Page Style -->
+        <link rel="stylesheet" href="{% static 'css/home.css' %}">
+        <!-- Flatpickr Calendar style, for homepage only -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     {% endif %}
-</head>
-<body>
-{% if request.GET.widget_mode %}
-    <!-- Widget mode: only upcoming tasks are shown in the new window-->
-    <div id="widgetContainer" onclick="returnToHomepage()">
-        <h5>Upcoming task</h5>
-        <div>
-            {% if soon_expiring_tasks %}
-                <ul class="list-unstyled">
-                    {% for task in soon_expiring_tasks %}
-                        <li>
-                            <strong>{{ task.title }}</strong><br>
-                            Deadline：{{ task.due_date|date:"Y-m-d H:i" }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No expiring tasks</p>
-            {% endif %}
-        </div>
-        <small>Click on this window to return to the homepage.</small>
-    </div>
-    <script>
-      function returnToHomepage() {
-          if (window.opener && !window.opener.closed) {
-              window.opener.close();
-              window.open(window.location.origin + window.location.pathname, '_blank');
-          } else {
-              window.open(window.location.origin + window.location.pathname, '_blank');
-          }
-          window.close();
-      }
-    </script>
-{% else %}
-    <!-- Full Home Page View -->
-    <div class="d-flex align-items-center ms-auto" style="padding: 1rem;">
-        <button id="widgetToggle" class="btn btn-sm btn-outline-secondary me-2">
-            <i class="bi bi-window"></i> Widget model
-        </button>
-    </div>
-    <div class="main-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="time-filter">
-                <!-- 若 URL 中无 end_date，则默认终止日期为当前日期+7天 -->
-                <input type="text" id="calendarTrigger" value="{{ selected_date|default:'' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
-            </div>
-            <div class="d-flex align-items-center ms-auto">
-                <div class="me-2">
-                    <span id="currentTimeDisplay">{{ current_time|date:"H:i:s" }}</span>
-                </div>
-                <div class="me-2">
-                    <select id="timezoneSelect" class="form-select form-select-sm" onchange="onTimezoneChange(this.value)">
-                        <option value="Asia/Shanghai">Beijing (UTC+8)</option>
-                        <option value="Asia/Tokyo">Tokyo (UTC+9)</option>
-                        <option value="Asia/Singapore">Singapore (UTC+8)</option>
-                        <option value="America/New_York">New York (UTC-5)</option>
-                        <option value="Europe/London">London (UTC+0)</option>
-                        <option value="Australia/Sydney">Sydney (UTC+10)</option>
-                    </select>
-                </div>
-                <!-- 用户头像按钮 -->
-                <div class="user-avatar">
-                  <a href="{% url 'profile' %}">
-                    <button class="btn btn-primary">{{ user.username }}</button>
-                  </a>
-                </div>
-            </div>
-        </header>
+{% endblock %}
 
-        <!-- Rolling alert area -->
-        <div class="ticker">
-            <div class="marquee">
-                <p>
-                    {% if soon_expiring_tasks %}
+{% block content %}
+    {% if request.GET.widget_mode %}
+        <!-- Widget mode: only tasks that are about to expire are displayed -->
+        <div id="widgetContainer" onclick="returnToHomepage()">
+            <h5>Upcoming task</h5>
+            <div>
+                {% if soon_expiring_tasks %}
+                    <ul class="list-unstyled">
                         {% for task in soon_expiring_tasks %}
-                            [{{ task.title }} Deadline：{{ task.due_date|date:"Y-m-d H:i" }}] &nbsp;&nbsp;
+                            <li>
+                                <strong>{{ task.title }}</strong><br>
+                                Deadline：{{ task.due_date|date:"Y-m-d H:i" }}
+                            </li>
                         {% endfor %}
-                    {% else %}
-                        No expiring tasks.
-                    {% endif %}
-                </p>
+                    </ul>
+                {% else %}
+                    <p>No expiring tasks</p>
+                {% endif %}
             </div>
+            <small>Click on this window to return to the homepage.</small>
         </div>
+    {% else %}
+        <!-- Home Page View -->
+        <div class="d-flex align-items-center ms-auto" style="padding: 1rem;">
+            <button id="widgetToggle" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="bi bi-window"></i> Widget model
+            </button>
+        </div>
+        <div class="main-container">
+            <!-- Header area -->
+            <header class="header">
+                <div class="time-filter">
+                    <!-- When there is no end_date in the URL, the default end date is the current date + 7 days. -->
+                    <input type="text" id="calendarTrigger" value="{{ selected_date|default:'' }}" onchange="onCalendarChange(this.value)" class="form-control form-control-sm" style="width: 150px;">
+                </div>
+                <div class="d-flex align-items-center ms-auto">
+                    <div class="me-2">
+                        <span id="currentTimeDisplay">{{ current_time|date:"H:i:s" }}</span>
+                    </div>
+                    <div class="me-2">
+                        <select id="timezoneSelect" class="form-select form-select-sm" onchange="onTimezoneChange(this.value)">
+                            <option value="Asia/Shanghai">Beijing (UTC+8)</option>
+                            <option value="Asia/Tokyo">Tokyo (UTC+9)</option>
+                            <option value="Asia/Singapore">Singapore (UTC+8)</option>
+                            <option value="America/New_York">New York (UTC-5)</option>
+                            <option value="Europe/London">London (UTC+0)</option>
+                            <option value="Australia/Sydney">Sydney (UTC+10)</option>
+                        </select>
+                    </div>
+                    <!-- User avatar button -->
+                    <div class="user-avatar">
+                      <a href="{% url 'profile' %}">
+                        <button class="btn btn-primary">{{ user.username }}</button>
+                      </a>
+                    </div>
+                </div>
+            </header>
 
-        <!-- Sidebar：显示所有任务（使用 all_tasks 变量，根据 start_date 与 end_date 过滤后的任务列表） -->
-        <aside class="sidebar">
-            <div class="mb-2">
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
-                    ➕ Quick add
-                </button>
-            </div>
-            {% if all_tasks %}
-                {% for task in all_tasks|dictsort:"priority"|dictsort:"due_date" %}
-                    <div class="card mb-2">
-                        <div class="card-body">
-                           <div class="d-flex justify-content-between align-items-center">
-                               <a href="{% url 'home' %}?task_id={{ task.id }}{% if search_query %}&search={{ search_query }}{% endif %}">
-                                   <h5>{{ task.title }}</h5>
-                               </a>
-                               {% if task.priority == 'high' %}
-                                  <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
-                               {% elif task.priority == 'low' %}
-                                  <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
-                               {% else %}
-                                  <span class="badge bg-info">{{ task.get_priority_display }}</span>
-                               {% endif %}
-                           </div>
-                           <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
-                           {% if task.is_completed %}
-                               <span class="badge bg-success">Done</span>
-                           {% elif task.is_expiring_soon %}
-                               <span class="badge bg-warning text-dark">Expiring</span>
-                           {% else %}
-                               <span class="badge bg-secondary">Unfinished</span>
-                           {% endif %}
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No tasks</p>
-            {% endif %}
-        </aside>
-
-        <!-- Main content区 -->
-        <main class="task-detail">
-            {% if selected_task %}
-                <div class="task-header">
-                    <h2>{{ selected_task.title }}</h2>
-                    <div class="task-meta">
-                        <span>Priority：
-                          {% if selected_task.priority == 'high' %}
-                             <span class="badge" style="background-color: red;">{{ selected_task.get_priority_display }}</span>
-                          {% elif selected_task.priority == 'low' %}
-                             <span class="badge" style="background-color: green;">{{ selected_task.get_priority_display }}</span>
-                          {% else %}
-                             <span class="badge bg-info">{{ selected_task.get_priority_display }}</span>
-                          {% endif %}
-                        </span> |
-                        <span>Deadline：{{ selected_task.due_date|date:"Y-m-d H:i" }}</span>
-                    </div>
-                </div>
-                <div class="task-content mt-3">
-                    <p>{{ selected_task.description }}</p>
-                </div>
-                <div class="mt-3">
-                    {% if selected_task.is_completed %}
-                        <span class="badge bg-success">Done</span>
-                    {% else %}
-                        <a href="{% url 'complete_task' selected_task.id %}" class="btn btn-success btn-sm">Marked as complete</a>
-                    {% endif %}
-                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteTask({{ selected_task.id }})">Delete</button>
-                </div>
-            {% else %}
-                <div class="text-center p-5">
-                    <div class="mb-3">
-                        <input type="text" id="taskSearchInput" class="form-control" placeholder="Search tasks" value="{{ search_query }}">
-                        <div class="mt-2">
-                            <button type="button" class="btn btn-secondary" onclick="searchTask()">Search</button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()">Clear Search</button>
-                        </div>
-                    </div>
-                    {% if search_query %}
-                        <h4>Search results</h4>
-                        <div class="list-group">
-                            {% for task in all_tasks %}
-                                <a href="{% url 'home' %}?task_id={{ task.id }}&search={{ search_query }}" class="list-group-item list-group-item-action">
-                                    {{ task.title }} - Deadline ：{{ task.due_date|date:"Y-m-d H:i" }}
-                                </a>
-                            {% empty %}
-                                <p class="text-muted">No matching tasks</p>
+            <!-- Rolling alert area -->
+            <div class="ticker">
+                <div class="marquee">
+                    <p>
+                        {% if soon_expiring_tasks %}
+                            {% for task in soon_expiring_tasks %}
+                                [{{ task.title }} Deadline：{{ task.due_date|date:"Y-m-d H:i" }}] &nbsp;&nbsp;
                             {% endfor %}
-                        </div>
-                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
-                            Add Tasks
-                        </button>
-                    {% else %}
-                        <h4>Tasks not selected</h4>
-                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
-                            Add Tasks
-                        </button>
-                    {% endif %}
+                        {% else %}
+                            No expiring tasks.
+                        {% endif %}
+                    </p>
                 </div>
-            {% endif %}
-        </main>
-    </div>
+            </div>
 
-    <!-- Quick Add Modal -->
-    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="quickAddForm" action="{% url 'quick_add_task' %}" method="post">
-            {% csrf_token %}
-            <div class="modal-header">
-              <h5 class="modal-title" id="quickAddModalLabel">Quickly add tasks</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              {{ quick_form.as_p }}
-              <small class="text-muted">Please fill in the task name, priority and deadline.</small>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" class="btn btn-primary">Add Tasks</button>
-            </div>
-          </form>
+            <!-- Sidebar: Show all tasks -->
+            <aside class="sidebar">
+                <div class="mb-2">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+                        ➕ Quick add
+                    </button>
+                </div>
+                {% if all_tasks %}
+                    {% for task in all_tasks|dictsort:"priority"|dictsort:"due_date" %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                               <div class="d-flex justify-content-between align-items-center">
+                                   <a href="{% url 'home' %}?task_id={{ task.id }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                                       <h5>{{ task.title }}</h5>
+                                   </a>
+                                   {% if task.priority == 'high' %}
+                                      <span class="badge" style="background-color: red;">{{ task.get_priority_display }}</span>
+                                   {% elif task.priority == 'low' %}
+                                      <span class="badge" style="background-color: green;">{{ task.get_priority_display }}</span>
+                                   {% else %}
+                                      <span class="badge bg-info">{{ task.get_priority_display }}</span>
+                                   {% endif %}
+                               </div>
+                               <small class="text-muted">Deadline：{{ task.due_date|date:"Y-m-d H:i" }}</small><br>
+                               {% if task.is_completed %}
+                                   <span class="badge bg-success">Done</span>
+                               {% elif task.is_expiring_soon %}
+                                   <span class="badge bg-warning text-dark">Expiring</span>
+                               {% else %}
+                                   <span class="badge bg-secondary">Unfinished</span>
+                               {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No tasks</p>
+                {% endif %}
+            </aside>
+
+            <!-- Main content area -->
+            <main class="task-detail">
+                {% if selected_task %}
+    <div class="task-header">
+        <h2>{{ selected_task.title }}</h2>
+        <div class="task-meta">
+            <span>Priority：
+              {% if selected_task.priority == 'high' %}
+                 <span class="badge" style="background-color: red;">{{ selected_task.get_priority_display }}</span>
+              {% elif selected_task.priority == 'low' %}
+                 <span class="badge" style="background-color: green;">{{ selected_task.get_priority_display }}</span>
+              {% else %}
+                 <span class="badge bg-info">{{ selected_task.get_priority_display }}</span>
+              {% endif %}
+            </span> |
+            <span>Deadline：{{ selected_task.due_date|date:"Y-m-d H:i" }}</span>
         </div>
-      </div>
     </div>
-
-    <!-- Detailed Add Modal -->
-    <div class="modal fade" id="detailedAddModal" tabindex="-1" aria-labelledby="detailedAddModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="detailedAddForm" action="{% url 'detailed_add_task' %}" method="post">
-            {% csrf_token %}
-            <div class="modal-header">
-              <h5 class="modal-title" id="detailedAddModalLabel">Add Tasks</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              {{ detailed_form.as_p }}
-              <small class="text-muted">Please fill in the task name, priority, start date, deadline and task description.</small>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" class="btn btn-primary">Add Tasks</button>
-            </div>
-          </form>
+    <div class="task-content mt-3">
+        <p>{{ selected_task.description }}</p>
+    </div>
+    <div class="mt-3">
+        {% if selected_task.is_completed %}
+              <span class="badge bg-success">Done</span>
+        {% else %}
+                  <a href="{% url 'complete_task' selected_task.id %}" class="btn btn-success btn-sm">Marked as complete</a>
+        {% endif %}
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteTask('{% url 'delete_task' selected_task.id %}')">Delete</button>
+                 </div>
+               {% else %}
+                    <div class="text-center p-5">
+                        <div class="mb-3">
+                            <input type="text" id="taskSearchInput" class="form-control" placeholder="Search tasks" value="{{ search_query }}">
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-secondary" onclick="searchTask()">Search</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()">Clear Search</button>
+                            </div>
+                        </div>
+                        {% if search_query %}
+                            <h4>Search results</h4>
+                            <div class="list-group">
+                                {% for task in all_tasks %}
+                                    <a href="{% url 'home' %}?task_id={{ task.id }}&search={{ search_query }}" class="list-group-item list-group-item-action">
+                                        {{ task.title }} - Deadline ：{{ task.due_date|date:"Y-m-d H:i" }}
+                                    </a>
+                                {% empty %}
+                                    <p class="text-muted">No matching tasks</p>
+                                {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
+                                Add Tasks
+                            </button>
+                        {% else %}
+                            <h4>Tasks not selected</h4>
+                            <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#detailedAddModal">
+                                Add Tasks
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </main>
         </div>
-      </div>
-    </div>
-{% endif %}
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-{% if not request.GET.widget_mode %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-    window.addEventListener("DOMContentLoaded", function() {
-        const calendarInput = document.getElementById("calendarTrigger");
-        const params = new URLSearchParams(window.location.search);
-        // 如果 URL 中没有指定 end_date，则默认设为当前日期+7天（作为终止日期）
-        if (!params.has("end_date") && !calendarInput.value) {
-            let today = new Date();
-            today.setDate(today.getDate() + 7);
-            calendarInput.value = today.toISOString().split('T')[0];
-        }
-        flatpickr("#calendarTrigger", {
-            locale: "en",
-            dateFormat: "Y-m-d",
-            defaultDate: calendarInput.value,
-            onChange: function(selectedDates, dateStr, instance) {
-                onCalendarChange(dateStr);
-            }
-        });
-        if (params.has("end_date")) {
-            calendarInput.value = params.get("end_date");
-        }
+        <!-- Quick Add Modal -->
+        <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form id="quickAddForm" action="{% url 'quick_add_task' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title" id="quickAddModalLabel">Quickly add tasks</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  {{ quick_form.as_p }}
+                  <small class="text-muted">Please fill in the task name, priority and deadline.</small>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="submit" class="btn btn-primary">Add Tasks</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
 
-        // 初始化截止日期输入框（精确到分，英文模式）
-        const quickDueDateInput = document.querySelector("#quickAddModal input[name='due_date']");
-        if (quickDueDateInput) {
-            flatpickr(quickDueDateInput, {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i",
-                locale: "en"
-            });
-        }
-        const detailedDueDateInput = document.querySelector("#detailedAddModal input[name='due_date']");
-        if (detailedDueDateInput) {
-            flatpickr(detailedDueDateInput, {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i",
-                locale: "en"
-            });
-        }
-        // 初始化 start_date 输入框（如果存在）
-        const detailedStartDateInput = document.querySelector("#detailedAddModal input[name='start_date']");
-        if (detailedStartDateInput) {
-            flatpickr(detailedStartDateInput, {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i",
-                locale: "en"
-            });
-        }
-    });
+        <!-- Detailed Add Modal -->
+        <div class="modal fade" id="detailedAddModal" tabindex="-1" aria-labelledby="detailedAddModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form id="detailedAddForm" action="{% url 'detailed_add_task' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title" id="detailedAddModalLabel">Add Tasks</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  {{ detailed_form.as_p }}
+                  <small class="text-muted">Please fill in the task name, priority, start date, deadline and task description.</small>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="submit" class="btn btn-primary">Add Tasks</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+    {% endif %}
+{% endblock %}
 
-    function onCalendarChange(value) {
-        // 当用户选择终止日期时，将今天作为起始日期，选中的日期作为 end_date
-        const url = new URL(window.location.href);
-        let now = new Date();
-        let year = now.getFullYear();
-        let month = (now.getMonth() + 1).toString().padStart(2, '0');
-        let day = now.getDate().toString().padStart(2, '0');
-        url.searchParams.set('start_date', `${year}-${month}-${day}`);
-        url.searchParams.set('end_date', value);
-        window.location.href = url.pathname + "?" + url.searchParams.toString();
-    }
-    function searchTask() {
-        const query = document.getElementById('taskSearchInput').value;
-        // 如果搜索内容为空，则不触发搜索
-        if(query.trim() === ""){
-            return;
-        }
-        const url = new URL(window.location.href);
-        url.searchParams.delete('task_id');
-        url.searchParams.set('search', query);
-        window.location.href = url.pathname + "?" + url.searchParams.toString();
-    }
-    function clearSearch() {
-        document.getElementById('taskSearchInput').value = '';
-        const url = new URL(window.location.href);
-        url.searchParams.delete('search');
-        url.searchParams.delete('task_id');
-        window.location.href = url.pathname + "?" + url.searchParams.toString();
-    }
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    function deleteTask(taskId) {
-        if (confirm('Sure you want to delete this task?')) {
-            const deleteUrl = "{% url 'delete_task' 0 %}".replace('0', taskId);
-            fetch(deleteUrl, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('task_id');
-                    window.location.href = url.pathname + "?" + url.searchParams.toString();
-                } else {
-                    alert('Failed to delete task');
-                }
-            })
-            .catch(error => {
-                console.error('Delete task error:', error);
-                alert('Error deleting task');
-            });
-        }
-    }
-    document.getElementById('quickAddForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const form = this;
-        const formData = new FormData(form);
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // 添加任务成功后，用返回的 Deadline 日期作为终止日期，今天作为起始日期
-                const newDeadline = data.task_deadline; // 例如 "2025-04-15 14:30"
-                const deadlineDateStr = newDeadline.split(' ')[0];
-                let now = new Date();
-                let year = now.getFullYear();
-                let month = (now.getMonth() + 1).toString().padStart(2, '0');
-                let day = now.getDate().toString().padStart(2, '0');
-                const todayStr = `${year}-${month}-${day}`;
-                const url = new URL(window.location.href);
-                url.searchParams.set('start_date', todayStr);
-                url.searchParams.set('end_date', deadlineDateStr);
-                window.location.href = url.pathname + "?" + url.searchParams.toString();
-            } else {
-                console.error('Quick Add Task Error', data.errors);
-            }
-        })
-        .catch(error => console.error('Error：', error));
-    });
-    document.getElementById('detailedAddForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const form = this;
-        const formData = new FormData(form);
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const newDeadline = data.task_deadline;
-                const deadlineDateStr = newDeadline.split(' ')[0];
-                let now = new Date();
-                let year = now.getFullYear();
-                let month = (now.getMonth() + 1).toString().padStart(2, '0');
-                let day = now.getDate().toString().padStart(2, '0');
-                const todayStr = `${year}-${month}-${day}`;
-                const url = new URL(window.location.href);
-                url.searchParams.set('start_date', todayStr);
-                url.searchParams.set('end_date', deadlineDateStr);
-                window.location.href = url.pathname + "?" + url.searchParams.toString();
-            } else {
-                console.error('Error adding task in detail', data.errors);
-            }
-        })
-        .catch(error => console.error('Error：', error));
-    });
-    function onTimezoneChange(tz) {
-        document.cookie = "user_timezone=" + tz + ";path=/;max-age=31536000";
-        updateClock();
-    }
-    function updateClock() {
-        const userTimeZone = getCookie("user_timezone") || "Asia/Shanghai";
-        const now = new Date();
-        const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: userTimeZone };
-        const formatter = new Intl.DateTimeFormat([], options);
-        document.getElementById("currentTimeDisplay").textContent = formatter.format(now);
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.task-detail') || e.target.closest('.sidebar') || e.target.closest('.modal')) {
-            return;
-        }
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('task_id')) {
-            url.searchParams.delete('task_id');
-            window.location.href = url.pathname + "?" + url.searchParams.toString();
-        }
-    });
-    document.getElementById('widgetToggle').addEventListener('click', function() {
-        window.open(window.location.pathname + "?widget_mode=1", "widgetWindow", "width=300,height=400,top=100,left=100,toolbar=no,scrollbars=no,resizable=yes");
-    });
-</script>
-{% endif %}
-</body>
-</html>
+{% block extra_scripts %}
+    {% if request.GET.widget_mode %}
+        <!-- JS in Widget Mode -->
+        <script src="{% static 'js/widget.js' %}"></script>
+    {% else %}
+        <!-- Flatpickr JS, for homepage only -->
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="{% static 'js/home.js' %}"></script>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+/*User Details Page Styles */
+
+.profile-box {
+    max-width: 600px;
+    margin: 80px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-label {
+    width: 120px;
+  }
+  
+  .edit-btn {
+    margin-left: 10px;
+  }
+  
+  .preset-avatar {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  

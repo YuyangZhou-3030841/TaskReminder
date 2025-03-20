@@ -1,0 +1,17 @@
+<header class="header">
+    <div class="time-filter">
+        <input type="text" id="calendarTrigger" value="{{ selected_date|default:'' }}" 
+               class="form-control form-control-sm" style="width: 150px;">
+    </div>
+    <div class="d-flex align-items-center ms-auto">
+        <div class="me-2">
+            <span id="currentTimeDisplay">{{ current_time|date:"H:i:s" }}</span>
+        </div>
+        {% include 'timezone_selector.html' %}
+        <div class="user-avatar">
+          <a href="{% url 'profile' %}">
+            <button class="btn btn-primary">{{ user.username }}</button>
+          </a>
+        </div>
+    </div>
+</header>

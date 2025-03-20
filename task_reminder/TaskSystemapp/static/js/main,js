@@ -1,0 +1,21 @@
+function initializeCalendar() {
+    const calendarInput = document.getElementById("calendarTrigger");
+    if (calendarInput) {
+        flatpickr(calendarInput, {
+            locale: "en",
+            dateFormat: "Y-m-d",
+            defaultDate: calendarInput.value,
+            onChange: function(selectedDates, dateStr) {
+                onCalendarChange(dateStr);
+            }
+        });
+    }
+}
+
+function initializeEventHandlers() {
+    document.getElementById('widgetToggle')?.addEventListener('click', function() {
+        window.open(window.location.pathname + "?widget_mode=1", 
+                   "widgetWindow", 
+                   "width=300,height=400,top=100,left=100,toolbar=no,scrollbars=no,resizable=yes");
+    });
+}
